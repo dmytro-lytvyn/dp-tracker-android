@@ -10,6 +10,13 @@ import android.support.annotation.Nullable;
 
 public class MainService extends Service {
     final BroadcastReceiver mReceiver = new EventReceiver();
+    final EventSender sender = new EventSender();
+
+    String eventContext = "ANDROID";
+    String eventObject = "EVENT_SERVICE";
+    String eventObjectId = null;
+    String eventAction = null;
+    String eventSchemaVersion = null;
 
     @Nullable
     @Override
@@ -37,13 +44,23 @@ public class MainService extends Service {
         filter.addAction(Intent.ACTION_HEADSET_PLUG);
         registerReceiver(mReceiver, filter);
 
+        eventAction = "START";
+        eventSchemaVersion = "v.1";
+        sender.sendEvent(this, eventContext, eventObject, eventObjectId, eventAction, eventSchemaVersion);
+
         return START_STICKY;
+
         //return super.onStartCommand(intent, flags, startId);
     }
 
     @Override
     public void onDestroy() {
         unregisterReceiver(mReceiver);
+
+        eventAction = "STOP";
+        eventSchemaVersion = "v.1";
+        sender.sendEvent(this, eventContext, eventObject, eventObjectId, eventAction, eventSchemaVersion);
+
         super.onDestroy();
     }
 }

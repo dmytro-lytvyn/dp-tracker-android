@@ -19,6 +19,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private Button button;
     private static final String PREFERENCES_NAME = "EventService";
 
+    final EventSender sender = new EventSender();
+
+    String eventContext = "ANDROID";
+    String eventObject = "EVENT_SERVICE_APP";
+    String eventObjectId = null;
+    String eventAction = null;
+    String eventSchemaVersion = null;
+
     private boolean isMyServiceRunning(Class<?> serviceClass) {
         ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
         for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
@@ -64,15 +72,51 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         setServiceRunningButton();
 
+        eventAction = "START";
+        eventSchemaVersion = "v.1";
+        sender.sendEvent(this, eventContext, eventObject, eventObjectId, eventAction, eventSchemaVersion);
+
         if (this.checkSelfPermission(android.Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[] {android.Manifest.permission.READ_PHONE_STATE}, 0);
         }
     }
 
     @Override
+    protected void onPause() {
+        eventAction = "PAUSE";
+        eventSchemaVersion = "v.1";
+        sender.sendEvent(this, eventContext, eventObject, eventObjectId, eventAction, eventSchemaVersion);
+
+        super.onPause();
+    }
+
+    @Override
     protected void onResume() {
         setServiceRunningButton();
+
+        eventAction = "RESUME";
+        eventSchemaVersion = "v.1";
+        sender.sendEvent(this, eventContext, eventObject, eventObjectId, eventAction, eventSchemaVersion);
+
         super.onResume();
+    }
+
+    @Override
+    protected void onStop() {
+        eventAction = "STOP";
+        eventSchemaVersion = "v.1";
+        sender.sendEvent(this, eventContext, eventObject, eventObjectId, eventAction, eventSchemaVersion);
+
+        super.onStop();
+    }
+
+    @Override
+    protected void onDestroy() {
+        eventAction = "DESTROY";
+        eventSchemaVersion = "v.1";
+        sender.sendEvent(this, eventContext, eventObject, eventObjectId, eventAction, eventSchemaVersion);
+
+        super.onDestroy();
     }
 
     @Override
@@ -83,6 +127,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             } else {
                 startService(new Intent(this, MainService.class));
             }
+
+            eventObject = "BUTTON";
+            eventObjectId = getResources().getResourceEntryName(v.getId());//button.getText().toString();
+            eventAction = "CLICK";
+            eventSchemaVersion = "v.1";
+            sender.sendEvent(this, eventContext, eventObject, eventObjectId, eventAction, eventSchemaVersion);
+
             setServiceRunningButton();
         }
     }
