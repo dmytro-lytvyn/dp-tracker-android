@@ -1,15 +1,8 @@
 package me.data_for.eventservice;
 
-import android.accounts.Account;
-import android.accounts.AccountManager;
-import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.net.Uri;
-import android.os.BatteryManager;
-import android.support.v4.app.ActivityCompat;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 
@@ -36,7 +29,7 @@ import java.util.TimeZone;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-public class ScreenReceiver extends BroadcastReceiver {
+public class EventSender {
     private static final String PREFERENCES_NAME = "EventService";
 
     private void savePreference(Context context, String key, String value) {
@@ -50,7 +43,7 @@ public class ScreenReceiver extends BroadcastReceiver {
         return prefs.getString(key, defaultValue);
     }
 
-    private void sendEvent(Context context, String eventContext, String eventObject, String eventObjectId, String eventAction) {
+    public void sendEvent(Context context, String eventContext, String eventObject, String eventObjectId, String eventAction, String eventSchemaVersion) {
         RequestQueue queue = Volley.newRequestQueue(context);
         String url = "https://input.data-for.me:1337/events";
 
@@ -87,7 +80,9 @@ public class ScreenReceiver extends BroadcastReceiver {
                 phoneNumber = tm.getLine1Number();
             }
 
-            jsonBody.put("context", eventContext);
+            if (eventSchemaVersion == null) eventSchemaVersion = "v.1";
+
+                jsonBody.put("context", eventContext);
             jsonBody.put("object", eventObject);
             if (eventObjectId != null) jsonBody.put("object_id", eventObjectId);
             jsonBody.put("action", eventAction);
@@ -99,7 +94,7 @@ public class ScreenReceiver extends BroadcastReceiver {
             jsonBody.put("event_id", eventId);
             jsonBody.put("event_timestamp", nowAsISO);
             jsonBody.put("timezone_offset", String.valueOf(timezoneOffset));
-            jsonBody.put("schema_version", "v.5");
+            jsonBody.put("schema_version", eventSchemaVersion);
             jsonBody.put("content_type", "application/json");
 
             jsonContent.put("app_user_agent", userAgent);
@@ -154,52 +149,5 @@ public class ScreenReceiver extends BroadcastReceiver {
         };
 
         queue.add(postRequest);
-    }
-
-    @Override
-    public void onReceive(Context context, Intent intent) {
-        final String intentAction = intent.getAction();
-        String object = null;
-        String objectId = null;
-        String action = null;
-
-        if (intentAction != null) {
-            if (intentAction.equals(Intent.ACTION_SCREEN_ON)) {
-                object = "SCREEN";
-                action = "TURN_ON";
-            } else if (intentAction.equals(Intent.ACTION_SCREEN_OFF)) {
-                object = "SCREEN";
-                action = "TURN_OFF";
-            } else if (intentAction.equals(Intent.ACTION_USER_PRESENT)) {
-                object = "USER";
-                action = "PRESENT";
-            } else if (intentAction.equals(Intent.ACTION_BOOT_COMPLETED)) {
-                object = "SYSTEM";
-                action = "BOOT_COMPLETED";
-            } else if (intentAction.equals(Intent.ACTION_REBOOT)) {
-                object = "SYSTEM";
-                action = "REBOOT";
-            } else if (intentAction.equals(Intent.ACTION_SHUTDOWN)) {
-                object = "SYSTEM";
-                action = "SHUTDOWN";
-            } else if (intentAction.equals(Intent.ACTION_BATTERY_CHANGED)) {
-                object = "BATTERY_LEVEL";
-                objectId = String.valueOf(intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1));
-                action = "CHANGE";
-            } else if (intentAction.equals(Intent.ACTION_POWER_CONNECTED)) {
-                object = "POWER";
-                action = "CONNECT";
-            } else if (intentAction.equals(Intent.ACTION_POWER_DISCONNECTED)) {
-                object = "POWER";
-                action = "DISCONNECT";
-            } else if (intentAction.equals(Intent.ACTION_HEADSET_PLUG)) {
-                object = "HEADSET";
-                action = "PLUG";
-            }
-
-            if (object != null) {
-                sendEvent(context, "ANDROID", object, objectId, action);
-            }
-        }
     }
 }

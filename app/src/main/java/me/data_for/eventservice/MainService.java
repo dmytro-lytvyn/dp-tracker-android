@@ -9,7 +9,7 @@ import android.support.annotation.Nullable;
 
 
 public class MainService extends Service {
-    final BroadcastReceiver mReceiver = new ScreenReceiver();
+    final BroadcastReceiver mReceiver = new EventReceiver();
 
     @Nullable
     @Override
