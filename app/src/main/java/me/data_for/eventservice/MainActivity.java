@@ -14,6 +14,8 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
+import org.json.JSONObject;
+
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
     private Button button;
@@ -21,11 +23,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     final EventSender sender = new EventSender();
 
-    String eventContext = "ANDROID";
-    String eventObject = "EVENT_SERVICE_APP";
-    String eventObjectId = null;
-    String eventAction = null;
-    String eventSchemaVersion = null;
+    String eventSubjectId = null;
+    String eventSubjectType = "app_instance";
+    String eventActionType = null;
 
     private boolean isMyServiceRunning(Class<?> serviceClass) {
         ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
@@ -67,14 +67,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         );
 
         SharedPreferences.Editor editor = this.getSharedPreferences(PREFERENCES_NAME, this.MODE_PRIVATE).edit();
-        editor.remove("sessionId"); //Start a new session on app restart (new sessionId will be geenrated on the first event)
+        editor.remove("sessionId"); // Start a new session on app restart (new sessionId will be generated on the first event)
         editor.apply();
 
         setServiceRunningButton();
 
-        eventAction = "START";
-        eventSchemaVersion = "v.1";
-        sender.sendEvent(this, eventContext, eventObject, eventObjectId, eventAction, eventSchemaVersion);
+        eventSubjectType = "app_instance";
+        eventActionType = "start";
+        sender.sendEvent(this, null, eventSubjectType, eventActionType, null);
 
         if (this.checkSelfPermission(android.Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[] {android.Manifest.permission.READ_PHONE_STATE}, 0);
@@ -83,9 +83,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     @Override
     protected void onPause() {
-        eventAction = "PAUSE";
-        eventSchemaVersion = "v.1";
-        sender.sendEvent(this, eventContext, eventObject, eventObjectId, eventAction, eventSchemaVersion);
+        eventSubjectType = "app_instance";
+        eventActionType = "pause";
+        sender.sendEvent(this, null, eventSubjectType, eventActionType, null);
 
         super.onPause();
     }
@@ -94,27 +94,27 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     protected void onResume() {
         setServiceRunningButton();
 
-        eventAction = "RESUME";
-        eventSchemaVersion = "v.1";
-        sender.sendEvent(this, eventContext, eventObject, eventObjectId, eventAction, eventSchemaVersion);
+        eventSubjectType = "app_instance";
+        eventActionType = "resume";
+        sender.sendEvent(this, null, eventSubjectType, eventActionType, null);
 
         super.onResume();
     }
 
     @Override
     protected void onStop() {
-        eventAction = "STOP";
-        eventSchemaVersion = "v.1";
-        sender.sendEvent(this, eventContext, eventObject, eventObjectId, eventAction, eventSchemaVersion);
+        eventSubjectType = "app_instance";
+        eventActionType = "stop";
+        sender.sendEvent(this, null, eventSubjectType, eventActionType, null);
 
         super.onStop();
     }
 
     @Override
     protected void onDestroy() {
-        eventAction = "DESTROY";
-        eventSchemaVersion = "v.1";
-        sender.sendEvent(this, eventContext, eventObject, eventObjectId, eventAction, eventSchemaVersion);
+        eventSubjectType = "app_instance";
+        eventActionType = "destroy";
+        sender.sendEvent(this, null, eventSubjectType, eventActionType, null);
 
         super.onDestroy();
     }
@@ -128,11 +128,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 startService(new Intent(this, MainService.class));
             }
 
-            eventObject = "BUTTON";
-            eventObjectId = getResources().getResourceEntryName(v.getId());//button.getText().toString();
-            eventAction = "CLICK";
-            eventSchemaVersion = "v.1";
-            sender.sendEvent(this, eventContext, eventObject, eventObjectId, eventAction, eventSchemaVersion);
+            eventSubjectId = getResources().getResourceEntryName(v.getId());//button.getText().toString();
+            eventSubjectType = "app_button";
+            eventActionType = "click";
+            sender.sendEvent(this, eventSubjectId, eventSubjectType, eventActionType, null);
 
             setServiceRunningButton();
         }

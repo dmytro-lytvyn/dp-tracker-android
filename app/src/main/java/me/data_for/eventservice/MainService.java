@@ -7,16 +7,15 @@ import android.content.IntentFilter;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
 
+import org.json.JSONObject;
+
 
 public class MainService extends Service {
     final BroadcastReceiver mReceiver = new EventReceiver();
     final EventSender sender = new EventSender();
 
-    String eventContext = "ANDROID";
-    String eventObject = "EVENT_SERVICE";
-    String eventObjectId = null;
-    String eventAction = null;
-    String eventSchemaVersion = null;
+    String eventSubjectType = null;
+    String eventActionType = null;
 
     @Nullable
     @Override
@@ -44,9 +43,9 @@ public class MainService extends Service {
         filter.addAction(Intent.ACTION_HEADSET_PLUG);
         registerReceiver(mReceiver, filter);
 
-        eventAction = "START";
-        eventSchemaVersion = "v.1";
-        sender.sendEvent(this, eventContext, eventObject, eventObjectId, eventAction, eventSchemaVersion);
+        eventSubjectType = "app_service";
+        eventActionType = "start";
+        sender.sendEvent(this, null, eventSubjectType, eventActionType, null);
 
         return START_STICKY;
 
@@ -57,9 +56,9 @@ public class MainService extends Service {
     public void onDestroy() {
         unregisterReceiver(mReceiver);
 
-        eventAction = "STOP";
-        eventSchemaVersion = "v.1";
-        sender.sendEvent(this, eventContext, eventObject, eventObjectId, eventAction, eventSchemaVersion);
+        eventSubjectType = "app_service";
+        eventActionType = "stop";
+        sender.sendEvent(this, null, eventSubjectType, eventActionType, null);
 
         super.onDestroy();
     }

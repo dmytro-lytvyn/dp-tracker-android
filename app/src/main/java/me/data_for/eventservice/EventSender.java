@@ -23,6 +23,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TimeZone;
@@ -43,12 +44,17 @@ public class EventSender {
         return prefs.getString(key, defaultValue);
     }
 
-    public void sendEvent(Context context, String eventContext, String eventObject, String eventObjectId, String eventAction, String eventSchemaVersion) {
+    public void sendEvent(Context context, String eventSubjectId, String eventSubjectType, String eventActionType, JSONObject eventActionAttributes) {
         RequestQueue queue = Volley.newRequestQueue(context);
         String url = "https://input.data-for.me:1337/events";
 
-        JSONObject jsonBody = new JSONObject();
-        JSONObject jsonContent = new JSONObject();
+        JSONObject jsonEvent = new JSONObject();
+        JSONObject jsonOrigin = new JSONObject();
+        JSONObject jsonActor = new JSONObject();
+        JSONObject jsonSubject = new JSONObject();
+        JSONObject jsonSubjectAttributes = new JSONObject();
+        JSONObject jsonAction = new JSONObject();
+        JSONObject jsonActionAttributes = new JSONObject();
         try {
             DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US); // Quoted "Z" to indicate UTC, no timezone offset
             df.setTimeZone(TimeZone.getTimeZone("UTC"));
@@ -72,7 +78,9 @@ public class EventSender {
             }
 
             String userAgent = android.os.Build.FINGERPRINT;
-            String deviceName = android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL;
+            String deviceManufacturer = android.os.Build.MANUFACTURER;
+            String deviceBrand = android.os.Build.BRAND;
+            String deviceModel = android.os.Build.MODEL;
 
             String phoneNumber = null;
             if (context.checkSelfPermission(android.Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED) {
@@ -80,34 +88,68 @@ public class EventSender {
                 phoneNumber = tm.getLine1Number();
             }
 
-            if (eventSchemaVersion == null) eventSchemaVersion = "v.1";
+            // Putting together JSON event
+            jsonEvent.put("event_id", eventId);
+            jsonEvent.put("event_timestamp", nowAsISO);
 
-                jsonBody.put("context", eventContext);
-            jsonBody.put("object", eventObject);
-            if (eventObjectId != null) jsonBody.put("object_id", eventObjectId);
-            jsonBody.put("action", eventAction);
-            if (phoneNumber != null) jsonBody.put("actor", "PHONE");
-            if (phoneNumber != null) jsonBody.put("actor_id", phoneNumber);
-            jsonBody.put("origin", "DEVICE");
-            jsonBody.put("origin_id", deviceId);
-            jsonBody.put("session_id", sessionId);
-            jsonBody.put("event_id", eventId);
-            jsonBody.put("event_timestamp", nowAsISO);
-            jsonBody.put("timezone_offset", String.valueOf(timezoneOffset));
-            jsonBody.put("schema_version", eventSchemaVersion);
-            jsonBody.put("content_type", "application/json");
+            // Origin
+            jsonOrigin.put("id", deviceId);
+            jsonOrigin.put("type", "android_device");
+            jsonEvent.put("origin", jsonOrigin);
 
-            jsonContent.put("app_user_agent", userAgent);
-            jsonContent.put("device_name", deviceName);
+            // Actor
+            if (phoneNumber != null) {
+                jsonActor.put("id", phoneNumber);
+                jsonActor.put("type", "phone_number");
+            } else {
+                jsonActor.put("id", deviceId);
+                jsonActor.put("type", "android_device");
+            }
+            jsonEvent.put("actor", jsonActor);
 
-            jsonBody.put("content", jsonContent);
+            // Subject
+
+            if (eventSubjectId != null) {
+                jsonSubject.put("id", eventSubjectId);
+            } else {
+                jsonSubject.put("id", deviceId);
+            }
+            if (eventSubjectType != null) {
+                jsonSubject.put("type", eventSubjectType);
+            } else {
+                jsonSubject.put("type", "device");
+            }
+            if (jsonSubjectAttributes.length() != 0) jsonSubject.put("attributes", jsonSubjectAttributes);
+            jsonEvent.put("subject", jsonSubject);
+
+            // Action
+            jsonAction.put("type", eventActionType);
+            jsonActionAttributes.put("session_id", sessionId);
+            jsonActionAttributes.put("action_timestamp", nowAsISO);
+            jsonActionAttributes.put("timezone_offset", String.valueOf(timezoneOffset));
+            jsonActionAttributes.put("app_user_agent", userAgent);
+            jsonActionAttributes.put("device_manufacturer", deviceManufacturer);
+            jsonActionAttributes.put("device_brand", deviceBrand);
+            jsonActionAttributes.put("device_model", deviceModel);
+            // Adding more action attributes
+            if (eventActionAttributes != null) {
+                Iterator<?> i = eventActionAttributes.keys();
+                String attributeKey;
+                while (i.hasNext()) {
+                    attributeKey = (String) i.next();
+                    jsonActionAttributes.put(attributeKey, eventActionAttributes.get(attributeKey));
+                }
+            }
+            if (jsonActionAttributes.length() != 0) jsonAction.put("attributes", jsonActionAttributes);
+            jsonEvent.put("action", jsonAction);
+
         } catch (JSONException e) {
             e.printStackTrace();
         }
 
         byte[] mRequestBody = null;
         try {
-            mRequestBody = jsonBody.toString().getBytes("utf-8");
+            mRequestBody = jsonEvent.toString().getBytes("utf-8");
         } catch (IOException e) {
             e.printStackTrace();
         }
